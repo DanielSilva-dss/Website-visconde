@@ -34,6 +34,23 @@
             </form>
         </section>
 
+        <section id="criar-documento" class="admin-section">
+            <h2>Adicionar ou Editar Documento</h2>
+            <form id="form-documento">
+                <div class="form-group">
+                    <label for="documento-titulo">Título do Documento</label>
+                    <input type="text" id="documento-titulo" required>
+                </div>
+                <div class="form-group">
+                    <label for="documento-url">URL (Link) do Documento</label>
+                    <input type="url" id="documento-url" required placeholder="https://...">
+                </div>
+                <button type="submit">Publicar Documento</button>
+            </form>
+        </section>
+
+        <hr style="margin: 40px 0;">
+
         <section id="gerenciar-avisos" class="container">
             <h2>Avisos Atuais</h2>
             <div id="lista-avisos">
@@ -48,6 +65,14 @@
                 </div>
         </section>
         
+        <hr style="margin: 40px 0;">
+
+        <section id="gerenciar-documentos" class="container">
+            <h2>Documentos Atuais</h2>
+            <div id="lista-documentos-admin">
+            </div>
+        </section>
+
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>

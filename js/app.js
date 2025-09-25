@@ -1,15 +1,17 @@
-// Aguarda o conteúdo do HTML ser totalmente carregado antes de executar o script
 document.addEventListener('DOMContentLoaded', () => {
-
-    // --- CÓDIGO EXISTENTE ---
     const db = firebase.firestore();
-    const avisosGrid = document.querySelector('.avisos-grid');
 
+    // Referências do HTML
+    const avisosGrid = document.querySelector('.avisos-grid');
+    const documentosLista = document.querySelector('.documentos-lista');
+    const formSugestao = document.querySelector('#form-sugestao');
+
+    // Função para carregar avisos
     const carregarAvisos = async () => {
-        // ... (toda a sua função carregarAvisos que já fizemos)
         try {
-            avisosGrid.innerHTML = ''; 
+            avisosGrid.innerHTML = 'Carregando avisos...';
             const snapshot = await db.collection('avisos').orderBy('dataPublicacao', 'desc').get();
+            avisosGrid.innerHTML = '';
 
             if (snapshot.empty) {
                 avisosGrid.innerHTML = '<p>Nenhum aviso encontrado no momento.</p>';
@@ -19,60 +21,73 @@ document.addEventListener('DOMContentLoaded', () => {
             snapshot.forEach(doc => {
                 const aviso = doc.data();
                 const data = aviso.dataPublicacao.toDate().toLocaleDateString('pt-BR');
-                const avisoCardHTML = `
-                    <article class="aviso-card">
-                        <h3>${aviso.titulo}</h3>
-                        <p>${aviso.mensagem}</p>
-                        <span>Publicado em: ${data}</span>
-                    </article>
+                const avisoCard = document.createElement('article');
+                avisoCard.className = 'aviso-card';
+                avisoCard.innerHTML = `
+                    <h3>${aviso.titulo}</h3>
+                    <p>${aviso.mensagem}</p>
+                    <span>Publicado em: ${data}</span>
                 `;
-                avisosGrid.innerHTML += avisoCardHTML;
+                avisosGrid.appendChild(avisoCard);
             });
-
         } catch (error) {
             console.error("Erro ao carregar avisos: ", error);
             avisosGrid.innerHTML = '<p>Ocorreu um erro ao carregar os avisos.</p>';
         }
     };
-    
-    carregarAvisos();
-    
-    // --- NOVO CÓDIGO PARA O FORMULÁRIO DE SUGESTÕES ---
 
-    // 1. Pega a referência do formulário no HTML
-    const formSugestao = document.querySelector('#sugestoes form');
+    // Função para carregar documentos
+    const carregarDocumentos = async () => {
+        try {
+            documentosLista.innerHTML = '<li>Carregando documentos...</li>';
+            const snapshot = await db.collection('documentos').orderBy('dataPublicacao', 'desc').get();
+            documentosLista.innerHTML = '';
 
-    // 2. Adiciona um "ouvinte" que espera pelo evento de 'submit' (envio) do formulário
+            if (snapshot.empty) {
+                documentosLista.innerHTML = '<li>Nenhum documento disponível no momento.</li>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const docData = doc.data();
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <a href="${docData.url}" target="_blank" rel="noopener noreferrer">${docData.titulo}</a>
+                    <span class="documento-meta">Disponibilizado em: ${docData.dataPublicacao.toDate().toLocaleDateString('pt-BR')}</span>
+                `;
+                documentosLista.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Erro ao carregar documentos:", error);
+            documentosLista.innerHTML = '<li>Erro ao carregar documentos.</li>';
+        }
+    };
+
+    // Lógica do formulário de sugestão
     formSugestao.addEventListener('submit', async (event) => {
-        // 3. Impede o comportamento padrão do navegador, que é recarregar a página
         event.preventDefault();
-
-        // 4. Pega os valores que o usuário digitou nos campos
         const identificacao = document.querySelector('#identificacao').value;
         const sugestaoTexto = document.querySelector('#sugestao-texto').value;
 
-        // Validação simples: não envia se a sugestão estiver vazia
         if (!sugestaoTexto.trim()) {
-            alert('Por favor, escreva sua sugestão antes de enviar.');
-            return;
+            return alert('Por favor, escreva sua sugestão antes de enviar.');
         }
 
         try {
-            // 5. Envia os dados para o Firestore, criando um novo documento na coleção 'sugestoes'
             await db.collection('sugestoes').add({
-                identificacao: identificacao, // pode ser vazio
+                identificacao: identificacao || 'Anônimo',
                 sugestao: sugestaoTexto,
-                dataEnvio: new Date() // Adiciona a data e hora exata do envio
+                dataEnvio: new Date()
             });
-
-            // 6. Dá um feedback para o usuário e limpa o formulário
-            alert('Sugestão enviada com sucesso! Obrigado por sua contribuição.');
-            formSugestao.reset(); // Limpa todos os campos do formulário
-
+            alert('Sugestão enviada com sucesso! Obrigado.');
+            formSugestao.reset();
         } catch (error) {
             console.error("Erro ao enviar sugestão: ", error);
-            alert('Ocorreu um erro ao enviar sua sugestão. Tente novamente.');
+            alert('Ocorreu um erro ao enviar sua sugestão.');
         }
     });
     
+    // Inicia o carregamento de tudo
+    carregarAvisos();
+    carregarDocumentos();
 });

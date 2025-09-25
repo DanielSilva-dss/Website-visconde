@@ -2,165 +2,114 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- VARIÁVEIS DE ESTADO ---
-    let modoEdicao = false;
-    let idEdicao = null;
-
-    // --- REFERÊNCIAS AOS ELEMENTOS DO HTML ---
+    // --- ESTADO E REFERÊNCIAS ---
+    let modoEdicaoAviso = false, idEdicaoAviso = null;
+    let modoEdicaoDoc = false, idEdicaoDoc = null;
+    
     const logoutButton = document.querySelector('#logout-button');
-    const formAviso = document.querySelector('#form-aviso');
-    const avisoTituloInput = document.querySelector('#aviso-titulo');
-    const avisoMensagemInput = document.querySelector('#aviso-mensagem');
-    const listaAvisosDiv = document.querySelector('#lista-avisos');
-    const formButton = formAviso.querySelector('button');
-    // NOVA REFERÊNCIA PARA A LISTA DE SUGESTÕES
+    // Avisos
+    const formAviso = document.querySelector('#form-aviso'), avisoTituloInput = document.querySelector('#aviso-titulo'), avisoMensagemInput = document.querySelector('#aviso-mensagem'), listaAvisosDiv = document.querySelector('#lista-avisos'), formAvisoButton = formAviso.querySelector('button');
+    // Documentos
+    const formDocumento = document.querySelector('#form-documento'), docTituloInput = document.querySelector('#documento-titulo'), docUrlInput = document.querySelector('#documento-url'), listaDocumentosAdminDiv = document.querySelector('#lista-documentos-admin'), formDocButton = formDocumento.querySelector('button');
+    // Sugestões
     const listaSugestoesDiv = document.querySelector('#lista-sugestoes');
 
-    // --- LÓGICA DE AUTENTICAÇÃO E LOGOUT ---
-    logoutButton.addEventListener('click', () => {
-        auth.signOut().then(() => alert('Você saiu da sua conta.'));
-    });
-
+    // --- AUTENTICAÇÃO ---
     auth.onAuthStateChanged((user) => {
         if (user) {
-            // Se o usuário está logado, carregamos TUDO
             renderAvisos();
-            renderSugestoes(); // <-- CHAMADA DA NOVA FUNÇÃO
-        } else {
-            window.location.href = 'login.html';
-        }
+            renderSugestoes();
+            renderDocumentosAdmin();
+        } else { window.location.href = 'login.html'; }
     });
+    logoutButton.addEventListener('click', () => auth.signOut().then(() => alert('Você saiu.')));
 
-    // --- FUNÇÕES DE GERENCIAMENTO DE AVISOS (CRUD) ---
-    // (Todo o código para criar, renderizar e deletar/editar avisos que já fizemos continua aqui, sem alterações)
-    
-    // FUNÇÃO PRINCIPAL DO FORMULÁRIO (CRIAR OU ATUALIZAR)
-    formAviso.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const titulo = avisoTituloInput.value;
-        const mensagem = avisoMensagemInput.value;
-
-        if (!titulo || !mensagem) return alert('Por favor, preencha todos os campos.');
-
+    // --- CRUD DE AVISOS ---
+    formAviso.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const titulo = avisoTituloInput.value, mensagem = avisoMensagemInput.value;
+        if (!titulo || !mensagem) return alert('Preencha todos os campos do aviso.');
         try {
-            if (modoEdicao) {
-                await db.collection('avisos').doc(idEdicao).update({ titulo, mensagem });
-                alert('Aviso atualizado com sucesso!');
-            } else {
-                await db.collection('avisos').add({ titulo, mensagem, dataPublicacao: new Date() });
-                alert('Aviso publicado com sucesso!');
-            }
-            resetarFormulario();
+            if (modoEdicaoAviso) await db.collection('avisos').doc(idEdicaoAviso).update({ titulo, mensagem });
+            else await db.collection('avisos').add({ titulo, mensagem, dataPublicacao: new Date() });
+            resetarFormularioAviso();
             renderAvisos();
-        } catch (error) {
-            console.error("Erro ao salvar aviso: ", error);
-            alert('Falha ao salvar o aviso.');
-        }
+        } catch (error) { console.error("Erro ao salvar aviso:", error); }
     });
-
-    // FUNÇÃO PARA LER E EXIBIR OS AVISOS EXISTENTES
     const renderAvisos = async () => {
-        listaAvisosDiv.innerHTML = 'Carregando avisos...';
+        listaAvisosDiv.innerHTML = 'Carregando...';
         const snapshot = await db.collection('avisos').orderBy('dataPublicacao', 'desc').get();
         listaAvisosDiv.innerHTML = '';
-
         snapshot.forEach(doc => {
             const aviso = doc.data();
-            const data = aviso.dataPublicacao.toDate().toLocaleDateString('pt-BR');
-            const avisoDiv = document.createElement('div');
-            avisoDiv.className = 'aviso-item';
-            avisoDiv.innerHTML = `
-                <h4>${aviso.titulo}</h4>
-                <p>${aviso.mensagem}</p>
-                <small>Publicado em: ${data}</small>
-                <div class="botoes-admin">
-                    <button class="edit-button" data-id="${doc.id}">Editar</button>
-                    <button class="delete-button" data-id="${doc.id}">Excluir</button>
-                </div>
-            `;
-            listaAvisosDiv.appendChild(avisoDiv);
+            const el = document.createElement('div'); el.className = 'aviso-item';
+            el.innerHTML = `<h4>${aviso.titulo}</h4><p>${aviso.mensagem}</p><small>Publicado em: ${aviso.dataPublicacao.toDate().toLocaleDateString('pt-BR')}</small><div class="botoes-admin"><button class="edit-button" data-id="${doc.id}">Editar</button><button class="delete-button" data-id="${doc.id}">Excluir</button></div>`;
+            listaAvisosDiv.appendChild(el);
         });
     };
-
-    // FUNÇÃO PARA LIDAR COM CLIQUES (DELETAR E EDITAR AVISOS)
-    listaAvisosDiv.addEventListener('click', async (event) => {
-        const target = event.target;
-        const id = target.dataset.id;
-        if (!id) return;
-
-        if (target.classList.contains('delete-button')) {
-            if (confirm('Tem certeza que deseja excluir este aviso?')) {
-                try {
-                    await db.collection('avisos').doc(id).delete();
-                    renderAvisos();
-                } catch (error) { console.error("Erro ao excluir aviso: ", error); }
-            }
-        }
-
+    listaAvisosDiv.addEventListener('click', async (e) => {
+        const target = e.target, id = target.dataset.id; if (!id) return;
+        if (target.classList.contains('delete-button') && confirm('Excluir este aviso?')) await db.collection('avisos').doc(id).delete().then(renderAvisos);
         if (target.classList.contains('edit-button')) {
-            const doc = await db.collection('avisos').doc(id).get();
-            const aviso = doc.data();
-            avisoTituloInput.value = aviso.titulo;
-            avisoMensagemInput.value = aviso.mensagem;
-            formButton.textContent = 'Salvar Alterações';
-            modoEdicao = true;
-            idEdicao = id;
-            window.scrollTo(0, 0);
+            const doc = await db.collection('avisos').doc(id).get(), aviso = doc.data();
+            avisoTituloInput.value = aviso.titulo; avisoMensagemInput.value = aviso.mensagem;
+            formAvisoButton.textContent = 'Salvar Alterações'; modoEdicaoAviso = true; idEdicaoAviso = id;
+            formAviso.scrollIntoView({ behavior: 'smooth' });
         }
     });
+    const resetarFormularioAviso = () => { formAviso.reset(); modoEdicaoAviso = false; idEdicaoAviso = null; formAvisoButton.textContent = 'Publicar Aviso'; };
 
-    // FUNÇÃO AUXILIAR PARA RESETAR O FORMULÁRIO
-    const resetarFormulario = () => {
-        formAviso.reset();
-        modoEdicao = false;
-        idEdicao = null;
-        formButton.textContent = 'Publicar Aviso';
+    // --- CRUD DE DOCUMENTOS ---
+    formDocumento.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const titulo = docTituloInput.value, url = docUrlInput.value;
+        if (!titulo || !url) return alert('Preencha todos os campos do documento.');
+        try {
+            if (modoEdicaoDoc) await db.collection('documentos').doc(idEdicaoDoc).update({ titulo, url });
+            else await db.collection('documentos').add({ titulo, url, dataPublicacao: new Date() });
+            resetarFormularioDoc();
+            renderDocumentosAdmin();
+        } catch (error) { console.error("Erro ao salvar documento:", error); }
+    });
+    const renderDocumentosAdmin = async () => {
+        listaDocumentosAdminDiv.innerHTML = 'Carregando...';
+        const snapshot = await db.collection('documentos').orderBy('dataPublicacao', 'desc').get();
+        listaDocumentosAdminDiv.innerHTML = '';
+        snapshot.forEach(doc => {
+            const docData = doc.data();
+            const el = document.createElement('div'); el.className = 'aviso-item';
+            el.innerHTML = `<h4>${docData.titulo}</h4><p><a href="${docData.url}" target="_blank" rel="noopener noreferrer">Ver Documento</a></p><div class="botoes-admin"><button class="edit-doc-button" data-id="${doc.id}">Editar</button><button class="delete-doc-button" data-id="${doc.id}">Excluir</button></div>`;
+            listaDocumentosAdminDiv.appendChild(el);
+        });
     };
+    listaDocumentosAdminDiv.addEventListener('click', async (e) => {
+        const target = e.target, id = target.dataset.id; if (!id) return;
+        if (target.classList.contains('delete-doc-button') && confirm('Excluir este documento?')) await db.collection('documentos').doc(id).delete().then(renderDocumentosAdmin);
+        if (target.classList.contains('edit-doc-button')) {
+            const doc = await db.collection('documentos').doc(id).get(), docData = doc.data();
+            docTituloInput.value = docData.titulo; docUrlInput.value = docData.url;
+            formDocButton.textContent = 'Salvar Alterações'; modoEdicaoDoc = true; idEdicaoDoc = id;
+            formDocumento.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+    const resetarFormularioDoc = () => { formDocumento.reset(); modoEdicaoDoc = false; idEdicaoDoc = null; formDocButton.textContent = 'Publicar Documento'; };
 
-    // --- NOVAS FUNÇÕES PARA GERENCIAR SUGESTÕES ---
-
-    // FUNÇÃO PARA LER E EXIBIR AS SUGESTÕES
+    // --- GERENCIAMENTO DE SUGESTÕES ---
     const renderSugestoes = async () => {
-        listaSugestoesDiv.innerHTML = 'Carregando sugestões...';
+        listaSugestoesDiv.innerHTML = 'Carregando...';
         const snapshot = await db.collection('sugestoes').orderBy('dataEnvio', 'desc').get();
         listaSugestoesDiv.innerHTML = '';
-
-        if (snapshot.empty) {
-            listaSugestoesDiv.innerHTML = '<p>Nenhuma sugestão recebida.</p>';
-            return;
-        }
-
+        if (snapshot.empty) { listaSugestoesDiv.innerHTML = '<p>Nenhuma sugestão recebida.</p>'; return; }
         snapshot.forEach(doc => {
             const sugestao = doc.data();
-            const data = sugestao.dataEnvio.toDate().toLocaleString('pt-BR');
-            
-            const sugestaoDiv = document.createElement('div');
-            sugestaoDiv.className = 'sugestao-item aviso-item'; // Reutiliza o estilo do aviso-item
-            sugestaoDiv.innerHTML = `
-                <p><strong>De:</strong> ${sugestao.identificacao || 'Anônimo'}</p>
-                <p>"${sugestao.sugestao}"</p>
-                <small>Enviado em: ${data}</small>
-                <div class="botoes-admin">
-                    <button class="delete-sugestao-button" data-id="${doc.id}">Excluir</button>
-                </div>
-            `;
-            listaSugestoesDiv.appendChild(sugestaoDiv);
+            const el = document.createElement('div'); el.className = 'sugestao-item aviso-item';
+            el.innerHTML = `<p><strong>De:</strong> ${sugestao.identificacao}</p><p>"${sugestao.sugestao}"</p><small>Enviado em: ${sugestao.dataEnvio.toDate().toLocaleString('pt-BR')}</small><div class="botoes-admin"><button class="delete-sugestao-button" data-id="${doc.id}">Excluir</button></div>`;
+            listaSugestoesDiv.appendChild(el);
         });
     };
-
-    // FUNÇÃO PARA DELETAR SUGESTÕES (usando delegação de eventos)
-    listaSugestoesDiv.addEventListener('click', async (event) => {
-        if (event.target.classList.contains('delete-sugestao-button')) {
-            const id = event.target.dataset.id;
-            if (confirm('Tem certeza que deseja excluir esta sugestão?')) {
-                try {
-                    await db.collection('sugestoes').doc(id).delete();
-                    renderSugestoes(); // Atualiza a lista de sugestões
-                } catch (error) {
-                    console.error("Erro ao excluir sugestão: ", error);
-                }
-            }
+    listaSugestoesDiv.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-sugestao-button') && confirm('Excluir esta sugestão?')) {
+            await db.collection('sugestoes').doc(e.target.dataset.id).delete().then(renderSugestoes);
         }
     });
-
 });

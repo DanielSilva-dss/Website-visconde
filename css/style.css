@@ -320,6 +320,84 @@ button[type="submit"] {
     color: white;
 }
 
+/* --- FORMULÁRIOS (Sugestão, Login, Admin) --- */
+#sugestoes h2, .login-container h2, #criar-aviso h2, #criar-documento h2 {
+    text-align: center;
+}
+#form-sugestao, #login-form, #form-aviso, #form-documento {
+    background-color: var(--cor-surface);
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 4px 10px var(--cor-sombra);
+    max-width: 600px;
+    margin: 0 auto;
+}
+.form-group {
+    margin-bottom: 20px;
+    width: 100%;
+}
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    font-size: 16px;
+    font-family: var(--fonte-principal);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(58, 98, 136, 0.25);
+}
+button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    transition: background-color 0.2s ease;
+}
+#form-sugestao button {
+    background-color: var(--cor-secundaria);
+    color: white;
+}
+#form-sugestao button:hover {
+    background-color: var(--cor-secundaria-hover);
+}
+#login-form button, #form-aviso button, #form-documento button {
+    background-color: var(--cor-primaria);
+    color: white;
+}
+#login-form button:hover, #form-aviso button:hover, #form-documento button:hover {
+    background-color: var(--cor-primaria-hover);
+}
+
+.delete-button,
+.delete-doc-button,
+.delete-sugestao-button {
+    background-color: var(--cor-perigo);
+    color: white;
+}
+
+.edit-button,
+.edit-doc-button {
+    background-color: var(--cor-secundaria);
+    color: white;
+}
+
 /* --- RODAPÉ --- */
 footer {
     background-color: var(--cor-surface);
@@ -349,6 +427,6 @@ footer .copyright {
         gap: 10px;
     }
     .admin-header .header-content {
-        flex-direction: row; /* Mantém o header do admin na mesma linha */
+        flex-direction: row;
     }
 }
